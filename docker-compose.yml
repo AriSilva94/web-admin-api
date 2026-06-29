@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: hunt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hunt
+      POSTGRES_PASSWORD: hunt
+      POSTGRES_DB: hunt
+    ports:
+      - "5432:5432"
+    volumes:
+      - hunt-pg-data:/var/lib/postgresql/data
+
+volumes:
+  hunt-pg-data:

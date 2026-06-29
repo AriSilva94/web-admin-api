@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum HuntType {
+  SOLO
+  PARTY
+}
+
+enum Visibility {
+  PRIVATE
+  FRIENDS
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hunts            Hunt[]
+  refreshTokens    RefreshToken[]
+  sentRequests     FriendRequest[] @relation("SentRequests")
+  receivedRequests FriendRequest[] @relation("ReceivedRequests")
+  friendshipsA     Friendship[]    @relation("FriendshipUserA")
+  friendshipsB     Friendship[]    @relation("FriendshipUserB")
+  sharesWithMe     HuntShare[]     @relation("SharedWithUser")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Hunt {
+  id                     String     @id @default(cuid())
+  ownerId                String
+  owner                  User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  type                   HuntType
+  title                  String
+  huntingSpot            String?
+  characterName          String?
+  vocation               String?
+  level                  Int?
+  tags                   String[]
+  notes                  String?
+  wheelCode              String?
+  visibility             Visibility @default(PRIVATE)
+  rawAnalyzer            String
+  startedAt              DateTime
+  endedAt                DateTime
+  sessionDurationMinutes Int
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  soloStats      SoloHuntStats?
+  partyStats     PartyHuntStats?
+  killedMonsters KilledMonster[]
+  lootedItems    LootedItem[]
+  shares         HuntShare[]
+
+  @@index([ownerId])
+  @@index([type])
+  @@index([huntingSpot])
+  @@index([characterName])
+  @@index([startedAt])
+}
+
+model SoloHuntStats {
+  id             String @id @default(cuid())
+  huntId         String @unique
+  hunt           Hunt   @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  rawXpGain      BigInt
+  xpGain         BigInt
+  rawXpPerHour   BigInt
+  xpPerHour      BigInt
+  loot           BigInt
+  supplies       BigInt
+  balance        BigInt
+  damage         BigInt
+  damagePerHour  BigInt
+  healing        BigInt
+  healingPerHour BigInt
+}
+
+model PartyHuntStats {
+  id            String             @id @default(cuid())
+  huntId        String             @unique
+  hunt          Hunt               @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  lootType      String
+  totalLoot     BigInt
+  totalSupplies BigInt
+  totalBalance  BigInt
+  members       PartyMemberStats[]
+}
+
+model PartyMemberStats {
+  id           String         @id @default(cuid())
+  partyStatsId String
+  partyStats   PartyHuntStats @relation(fields: [partyStatsId], references: [id], onDelete: Cascade)
+  name         String
+  isLeader     Boolean        @default(false)
+  loot         BigInt
+  supplies     BigInt
+  balance      BigInt
+  damage       BigInt
+  healing      BigInt
+
+  @@index([partyStatsId])
+}
+
+model KilledMonster {
+  id     String @id @default(cuid())
+  huntId String
+  hunt   Hunt   @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  name   String
+  count  Int
+
+  @@index([huntId])
+}
+
+model LootedItem {
+  id     String @id @default(cuid())
+  huntId String
+  hunt   Hunt   @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  name   String
+  count  Int
+
+  @@index([huntId])
+}
+
+model FriendRequest {
+  id         String              @id @default(cuid())
+  fromUserId String
+  fromUser   User                @relation("SentRequests", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId   String
+  toUser     User                @relation("ReceivedRequests", fields: [toUserId], references: [id], onDelete: Cascade)
+  status     FriendRequestStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@unique([fromUserId, toUserId])
+  @@index([toUserId])
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userAId   String
+  userA     User     @relation("FriendshipUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String
+  userB     User     @relation("FriendshipUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
+}
+
+model HuntShare {
+  id           String   @id @default(cuid())
+  huntId       String
+  hunt         Hunt     @relation(fields: [huntId], references: [id], onDelete: Cascade)
+  sharedWithId String
+  sharedWith   User     @relation("SharedWithUser", fields: [sharedWithId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([huntId, sharedWithId])
+  @@index([sharedWithId])
+}
