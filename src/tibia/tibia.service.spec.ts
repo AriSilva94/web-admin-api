@@ -18,7 +18,7 @@ describe('TibiaService', () => {
   it('returns the normalized character on success', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
+      json: () => ({
         character: {
           character: {
             name: 'Bobeek',
@@ -30,7 +30,7 @@ describe('TibiaService', () => {
           },
         },
       }),
-    }) as unknown as typeof fetch;
+    });
 
     const service = new TibiaService(makeConfig());
     await expect(service.fetchCharacter('Bobeek')).resolves.toEqual({
@@ -42,6 +42,7 @@ describe('TibiaService', () => {
     });
     expect(global.fetch).toHaveBeenCalledWith(
       'https://tibia.test/v4/character/Bobeek',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       expect.objectContaining({ signal: expect.anything() }),
     );
   });
@@ -49,8 +50,8 @@ describe('TibiaService', () => {
   it('throws NotFound when the character name is empty', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ character: { character: { name: '' } } }),
-    }) as unknown as typeof fetch;
+      json: () => ({ character: { character: { name: '' } } }),
+    });
 
     const service = new TibiaService(makeConfig());
     await expect(service.fetchCharacter('Ghost')).rejects.toBeInstanceOf(
@@ -59,9 +60,7 @@ describe('TibiaService', () => {
   });
 
   it('throws BadGateway when the upstream is not ok', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({ ok: false, status: 503 }) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 503 });
 
     const service = new TibiaService(makeConfig());
     await expect(service.fetchCharacter('Bobeek')).rejects.toBeInstanceOf(
@@ -70,9 +69,7 @@ describe('TibiaService', () => {
   });
 
   it('throws BadGateway when fetch rejects', async () => {
-    global.fetch = jest
-      .fn()
-      .mockRejectedValue(new Error('network')) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error('network'));
 
     const service = new TibiaService(makeConfig());
     await expect(service.fetchCharacter('Bobeek')).rejects.toBeInstanceOf(

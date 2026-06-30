@@ -4,6 +4,7 @@ import { AnalyzerModule } from './analyzer/analyzer.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { CharactersModule } from './characters/characters.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { FriendsModule } from './friends/friends.module';
 import { HuntsModule } from './hunts/hunts.module';
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     AuthModule,
     HuntsModule,
+    CharactersModule,
     DashboardModule,
     FriendsModule,
     SharingModule,
