@@ -116,12 +116,12 @@ describe('Characters (e2e)', () => {
       .expect(409);
   });
 
-  it('POST /characters/:id/refresh returns 201 with an updated snapshot', async () => {
+  it('POST /characters/:id/refresh returns 200 with an updated snapshot', async () => {
     const authorization = `Bearer ${accessToken}`;
     const res = await request(app.getHttpServer())
       .post(`/characters/${characterId}/refresh`)
       .set('Authorization', authorization)
-      .expect(201);
+      .expect(200);
 
     const body = res.body as CharacterBody;
     expect(body.id).toBe(characterId);

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Post,
   UseGuards,
@@ -39,6 +40,7 @@ export class CharactersController {
   }
 
   @Post(':id/refresh')
+  @HttpCode(HttpStatus.OK)
   refresh(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.characters.refresh(user.userId, id);
   }
