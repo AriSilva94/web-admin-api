@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import { SOLO_RAW } from '../src/analyzer/parser/fixtures';
 import { AppModule } from '../src/app.module';
 import '../src/common/bigint-serializer';
+import { TibiaService } from '../src/tibia/tibia.service';
 
 interface RegisteredUser {
   accessToken: string;
@@ -15,6 +16,20 @@ interface HuntBody {
   id: string;
   soloStats: { balance: string };
 }
+
+interface CharacterBody {
+  id: string;
+}
+
+const mockTibiaService = {
+  fetchCharacter: async (name: string) => ({
+    name,
+    sex: 'male',
+    vocation: 'Knight',
+    level: 100,
+    world: 'Calmera',
+  }),
+};
 
 interface FriendRequestBody {
   id: string;
@@ -43,7 +58,10 @@ describe('Social e dashboard (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(TibiaService)
+      .useValue(mockTibiaService)
+      .compile();
     app = moduleFixture.createNestApplication();
     await app.init();
   });
@@ -75,6 +93,14 @@ describe('Social e dashboard (e2e)', () => {
     const aliceAuth = `Bearer ${alice.accessToken}`;
     const bobAuth = `Bearer ${bob.accessToken}`;
 
+    // Create a character for Alice — required by the hunt-requires-character rule
+    const aliceCharRes = await request(app.getHttpServer())
+      .post('/characters')
+      .set('Authorization', aliceAuth)
+      .send({ name: 'AliceSocialChar' })
+      .expect(201);
+    const aliceCharId = (aliceCharRes.body as CharacterBody).id;
+
     const hunt = await request(app.getHttpServer())
       .post('/hunts')
       .set('Authorization', aliceAuth)
@@ -82,6 +108,7 @@ describe('Social e dashboard (e2e)', () => {
         raw: SOLO_RAW,
         huntingSpot: 'Social Test Spot',
         visibility: 'FRIENDS',
+        characterId: aliceCharId,
       })
       .expect(201);
     const huntBody = hunt.body as HuntBody;
