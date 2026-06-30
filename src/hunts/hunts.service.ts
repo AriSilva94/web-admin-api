@@ -8,6 +8,7 @@ import { AnalyzerValidationError } from '../analyzer/analyzer.errors';
 import { parseAnalyzer } from '../analyzer/parser/parse-analyzer';
 import { ParsedAnalyzer } from '../analyzer/schemas/analyzer.schema';
 import { paginate, parsePagination } from '../common/pagination';
+import { CharactersService } from '../characters/characters.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHuntDto } from './dto/create-hunt.dto';
 import { ListHuntsQuery } from './dto/list-hunts.dto';
@@ -16,11 +17,24 @@ import { HUNT_INCLUDE, toCreateData, toResponse } from './hunts.mapper';
 
 @Injectable()
 export class HuntsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly characters: CharactersService,
+  ) {}
 
   async create(ownerId: string, dto: CreateHuntDto) {
-    let parsed: ParsedAnalyzer;
+    const character = await this.characters.findOwnedById(
+      ownerId,
+      dto.characterId,
+    );
+    if (!character) {
+      throw new UnprocessableEntityException({
+        message: 'Select one of your characters',
+        issues: [{ field: 'characterId', message: 'Character not found' }],
+      });
+    }
 
+    let parsed: ParsedAnalyzer;
     try {
       parsed = parseAnalyzer(dto.raw);
     } catch (error) {
@@ -33,8 +47,20 @@ export class HuntsService {
       throw error;
     }
 
+    const data = toCreateData(
+      parsed,
+      {
+        ...dto,
+        characterName: character.name,
+        vocation: character.vocation,
+        level: character.level,
+      },
+      ownerId,
+    );
+    data.character = { connect: { id: character.id } };
+
     const hunt = await this.prisma.hunt.create({
-      data: toCreateData(parsed, dto, ownerId),
+      data,
       include: HUNT_INCLUDE,
     });
     return toResponse(hunt);

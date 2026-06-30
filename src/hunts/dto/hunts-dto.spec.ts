@@ -4,8 +4,11 @@ import { updateHuntSchema } from './update-hunt.dto';
 
 describe('createHuntSchema', () => {
   it('accepts the minimum payload and defaults visibility', () => {
-    expect(createHuntSchema.parse({ raw: 'Session data' })).toEqual({
+    expect(
+      createHuntSchema.parse({ raw: 'Session data', characterId: 'c1' }),
+    ).toEqual({
       raw: 'Session data',
+      characterId: 'c1',
       visibility: 'PRIVATE',
     });
   });
@@ -13,11 +16,9 @@ describe('createHuntSchema', () => {
   it('accepts valid metadata', () => {
     const payload = {
       raw: 'Session data',
+      characterId: 'c1',
       title: 'Cobra hunt',
       huntingSpot: 'Cobra Bastion',
-      characterName: 'Arizoka',
-      vocation: 'Elite Knight',
-      level: 500,
       tags: ['profit'],
       notes: 'Clean session',
       visibility: 'FRIENDS' as const,

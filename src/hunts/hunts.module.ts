@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AnalyzerModule } from '../analyzer/analyzer.module';
+import { CharactersModule } from '../characters/characters.module';
 import { HuntsController } from './hunts.controller';
 import { HuntsService } from './hunts.service';
 
 @Module({
-  imports: [AnalyzerModule],
+  imports: [AnalyzerModule, CharactersModule],
   controllers: [HuntsController],
   providers: [HuntsService],
   exports: [HuntsService],

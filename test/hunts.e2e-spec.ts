@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import '../src/common/bigint-serializer';
 import { SOLO_RAW } from '../src/analyzer/parser/fixtures';
 import { AppModule } from '../src/app.module';
+import { TibiaService } from '../src/tibia/tibia.service';
 
 interface AuthResponseBody {
   accessToken: string;
@@ -24,26 +25,53 @@ interface HuntsListBody {
   data: HuntBody[];
 }
 
+interface CharacterBody {
+  id: string;
+}
+
+const mockTibiaService = {
+  fetchCharacter: (name: string) => ({
+    name,
+    sex: 'male',
+    vocation: 'Knight',
+    level: 100,
+    world: 'Calmera',
+  }),
+};
+
 describe('Hunts (e2e)', () => {
   let app: INestApplication<App>;
   let accessToken: string;
+  let characterId: string;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(TibiaService)
+      .useValue(mockTibiaService)
+      .compile();
     app = moduleFixture.createNestApplication();
     await app.init();
 
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const registration = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
-        email: `hunts_${Date.now()}@test.com`,
+        email: `hunts_${suffix}@test.com`,
         password: 'password123',
         displayName: 'Hunts E2E',
       })
       .expect(201);
     accessToken = (registration.body as AuthResponseBody).accessToken;
+
+    // Create a character — required by the hunt-requires-character rule introduced in task 4
+    const charRes = await request(app.getHttpServer())
+      .post('/characters')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'HuntsE2EChar' })
+      .expect(201);
+    characterId = (charRes.body as CharacterBody).id;
   });
 
   afterAll(async () => app.close());
@@ -53,7 +81,7 @@ describe('Hunts (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/hunts')
       .set('Authorization', authorization)
-      .send({ raw: SOLO_RAW, huntingSpot: 'Cobra Bastion' })
+      .send({ raw: SOLO_RAW, huntingSpot: 'Cobra Bastion', characterId })
       .expect(201);
 
     const createdBody = created.body as HuntBody;

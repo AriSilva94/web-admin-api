@@ -37,6 +37,7 @@ model User {
   friendshipsA     Friendship[]    @relation("FriendshipUserA")
   friendshipsB     Friendship[]    @relation("FriendshipUserB")
   sharesWithMe     HuntShare[]     @relation("SharedWithUser")
+  characters       Character[]
 }
 
 model RefreshToken {
@@ -59,6 +60,8 @@ model Hunt {
   title                  String
   huntingSpot            String?
   characterName          String?
+  characterId            String?
+  character              Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
   vocation               String?
   level                  Int?
   tags                   String[]
@@ -83,6 +86,7 @@ model Hunt {
   @@index([huntingSpot])
   @@index([characterName])
   @@index([startedAt])
+  @@index([characterId])
 }
 
 model SoloHuntStats {
@@ -172,6 +176,24 @@ model Friendship {
 
   @@unique([userAId, userBId])
   @@index([userBId])
+}
+
+model Character {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  sex       String
+  vocation  String
+  level     Int
+  world     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hunts Hunt[]
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
 }
 
 model HuntShare {

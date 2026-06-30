@@ -16,8 +16,12 @@ O backend é uma aplicação NestJS modular, sem prefixo global. O fluxo padrão
 | `FriendsModule` | requests e amizades; exporta verificação de vínculo |
 | `SharingModule` | share, unshare e listagem recebida |
 | `DashboardModule` | agregações das hunts do proprietário |
+| `TibiaModule` | cliente HTTP para TibiaData v4; expõe `TibiaService.fetchCharacter(name)` |
+| `CharactersModule` | CRUD de personagens vinculados à conta; snapshot e refresh via `TibiaModule` |
 
 `AppModule` registra todos os módulos e torna `ConfigModule` global.
+
+A variável de ambiente `TIBIADATA_BASE_URL` define a base do cliente HTTP do `TibiaModule` (default `https://api.tibiadata.com`). O navegador nunca chama a TibiaData diretamente — toda consulta parte do backend.
 
 ## Fluxos principais
 
@@ -29,9 +33,13 @@ O `JwtAuthGuard` aciona a Passport strategy, valida o access token e disponibili
 
 Cada body ou query passa por um schema Zod no parâmetro correspondente. A resposta de erro contém `issues`, com campo e mensagem, e status 422. O analyzer adiciona erros semânticos próprios no mesmo status.
 
+### Cadastro e refresh de personagem
+
+`CharactersService` recebe o nome, delega ao `TibiaService.fetchCharacter(name)` que chama `GET /v4/character/{name}` na TibiaData v4, e persiste o snapshot retornado. Nome vazio resulta em 404 antes de chamar a API externa; erro upstream resulta em 502. O refresh repete o mesmo fluxo e sobrescreve o snapshot existente.
+
 ### Criação de hunt
 
-O service executa o parser autoritativo, monta dados aninhados para o tipo detectado, persiste hunt e stats em uma operação Prisma e mapeia a entidade para a resposta canônica.
+O service valida que o `characterId` informado pertence ao usuário autenticado; se ausente ou de outra conta, retorna 422. Em seguida executa o parser autoritativo, desnormaliza `characterName`, `vocation` e `level` do registro Character, monta dados aninhados para o tipo detectado, persiste hunt e stats em uma operação Prisma e mapeia a entidade para a resposta canônica.
 
 ### Leitura e autorização
 

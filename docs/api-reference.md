@@ -39,11 +39,24 @@ O usuário público contém `id`, `email`, `displayName` e `createdAt`.
 
 Preview não persiste dados e não exige autenticação.
 
+## Characters
+
+Todas as rotas exigem autenticação. O limite é de 10 personagens por conta. O nome é único por conta.
+
+| Método | Rota | Entrada | Sucesso | Erros principais |
+| --- | --- | --- | --- | --- |
+| POST | `/characters` | `name` | 201 com personagem | 409 limite de 10 atingido ou nome duplicado na conta; 422 nome vazio |
+| GET | `/characters` | — | 200 com lista de personagens do usuário | — |
+| POST | `/characters/:id/refresh` | — | 200 com personagem atualizado via TibiaData | 404 personagem não encontrado; 502 erro upstream |
+| DELETE | `/characters/:id` | — | 204 | 404 personagem não encontrado |
+
+`POST /characters` busca o personagem na TibiaData v4 no momento do cadastro. Nome inexistente retorna 404; falha upstream retorna 502. `POST /characters/:id/refresh` repete a mesma busca para atualizar o snapshot armazenado.
+
 ## Hunts
 
 ### Criação
 
-`POST /hunts` exige autenticação. O único campo obrigatório é `raw`; `visibility` assume `PRIVATE`. Metadados opcionais: `title`, `huntingSpot`, `characterName`, `vocation`, `level`, `tags` e `notes`. Limites: título e local 120 caracteres, personagem 60, vocation 40, até 30 tags e notas com até 2000 caracteres. Retorna 201 com a hunt completa. Analyzer inválido retorna 422.
+`POST /hunts` exige autenticação. Campos obrigatórios: `raw` e `characterId`. O personagem informado deve pertencer ao usuário autenticado; personagem ausente ou de outra conta retorna 422. O serviço desnormaliza `characterName`, `vocation` e `level` diretamente do registro Character — esses campos não são aceitos no body. `visibility` assume `PRIVATE`. Metadados opcionais: `title`, `huntingSpot`, `tags` e `notes`. Limites: título e local 120 caracteres, até 30 tags e notas com até 2000 caracteres. Retorna 201 com a hunt completa. Analyzer inválido retorna 422.
 
 ### Listagem
 

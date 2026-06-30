@@ -26,9 +26,13 @@ Identidade, e-mail único, hash de senha, nome de exibição e timestamps. Relac
 
 Pertence a um usuário e guarda somente hash, expiração, revogação opcional e criação. O índice por usuário suporta a busca durante refresh/logout. É removido com o usuário.
 
+### Character
+
+Pertence a um usuário e armazena o snapshot do personagem Tibia: nome, sexo, vocação, nível e mundo. O par `ownerId`/`name` é único por conta. É removido com o usuário (`onDelete: Cascade`). O limite é de 10 personagens por conta.
+
 ### Hunt
 
-Pertence ao proprietário e contém tipo, metadados, visibilidade, analyzer bruto, período e duração. Possui exatamente um conjunto de stats solo ou party conforme o tipo, além de coleções de monstros, itens e shares. Índices atendem owner, tipo, local, personagem e início.
+Pertence ao proprietário e contém tipo, metadados, visibilidade, analyzer bruto, período e duração. Possui exatamente um conjunto de stats solo ou party conforme o tipo, além de coleções de monstros, itens e shares. Índices atendem owner, tipo, local, personagem e início. A relação `characterId` aponta para o personagem usado na sessão; hunts legadas mantêm esse campo nulo (`onDelete: SetNull`).
 
 ### SoloHuntStats
 
@@ -56,7 +60,8 @@ Liga uma hunt a um destinatário. A chave composta hunt/destinatário impede dup
 
 ## Cascatas de domínio
 
-- excluir usuário remove tokens, hunts, requests, amizades e shares relacionados;
+- excluir usuário remove tokens, hunts, personagens, requests, amizades e shares relacionados;
+- excluir personagem anula `characterId` nas hunts associadas, preservando o histórico;
 - excluir hunt remove stats, membros, monstros, itens e shares;
 - remover amizade pelo service também apaga shares existentes entre os dois usuários nos dois sentidos;
 - atualizar metadados não recria stats nem altera analyzer bruto.
