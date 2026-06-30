@@ -53,7 +53,14 @@ describe('HuntsService', () => {
   it('returns analyzer issues as 422 on invalid creation input', async () => {
     const service = new HuntsService(
       makePrisma() as never,
-      { findOwnedById: jest.fn() } as never,
+      {
+        findOwnedById: jest.fn().mockResolvedValue({
+          id: 'c1',
+          name: 'Bob',
+          vocation: 'Knight',
+          level: 100,
+        }),
+      } as never,
     );
 
     await expect(
