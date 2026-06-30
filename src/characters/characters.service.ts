@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TibiaService } from '../tibia/tibia.service';
 
@@ -32,9 +33,19 @@ export class CharactersService {
       throw new ConflictException('Character already added to this account');
     }
 
-    return this.prisma.character.create({
-      data: { ownerId, ...snapshot },
-    });
+    try {
+      return await this.prisma.character.create({
+        data: { ownerId, ...snapshot },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException('Character already added to this account');
+      }
+      throw err;
+    }
   }
 
   list(ownerId: string) {

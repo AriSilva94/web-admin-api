@@ -21,7 +21,7 @@ interface CharacterBody {
 }
 
 const mockTibiaService = {
-  fetchCharacter: async (name: string) => ({
+  fetchCharacter: (name: string) => ({
     name,
     sex: 'male',
     vocation: 'Knight',
@@ -161,7 +161,11 @@ describe('Characters (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/hunts')
       .set('Authorization', authorization)
-      .send({ raw: SOLO_RAW, characterId: huntCharId, huntingSpot: 'Test Spot' })
+      .send({
+        raw: SOLO_RAW,
+        characterId: huntCharId,
+        huntingSpot: 'Test Spot',
+      })
       .expect(201);
 
     expect((res.body as { id: string }).id).toBeTruthy();
@@ -174,5 +178,67 @@ describe('Characters (e2e)', () => {
       .set('Authorization', authorization)
       .send({ raw: SOLO_RAW, characterId: 'non-existent-id' })
       .expect(422);
+  });
+
+  describe('cross-account isolation', () => {
+    let tokenA: string;
+    let tokenB: string;
+    let charIdA: string;
+
+    beforeAll(async () => {
+      const suffix = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      // Register and login user A
+      const regA = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: `iso_a_${suffix}@test.com`,
+          password: 'password123',
+          displayName: 'Isolation A',
+        })
+        .expect(201);
+      tokenA = (regA.body as AuthResponseBody).accessToken;
+
+      // Register and login user B
+      const regB = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: `iso_b_${suffix}@test.com`,
+          password: 'password123',
+          displayName: 'Isolation B',
+        })
+        .expect(201);
+      tokenB = (regB.body as AuthResponseBody).accessToken;
+
+      // User A creates a character
+      const charRes = await request(app.getHttpServer())
+        .post('/characters')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .send({ name: 'IsoChar' })
+        .expect(201);
+      charIdA = (charRes.body as CharacterBody).id;
+    });
+
+    it("B gets 404 on POST /characters/:id/refresh for A's character", async () => {
+      await request(app.getHttpServer())
+        .post(`/characters/${charIdA}/refresh`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .expect(404);
+    });
+
+    it("B gets 404 on DELETE /characters/:id for A's character", async () => {
+      await request(app.getHttpServer())
+        .delete(`/characters/${charIdA}`)
+        .set('Authorization', `Bearer ${tokenB}`)
+        .expect(404);
+    });
+
+    it("B's POST /hunts with A's characterId is rejected with 422", async () => {
+      await request(app.getHttpServer())
+        .post('/hunts')
+        .set('Authorization', `Bearer ${tokenB}`)
+        .send({ raw: SOLO_RAW, characterId: charIdA, huntingSpot: 'Test Spot' })
+        .expect(422);
+    });
   });
 });

@@ -22,7 +22,7 @@ interface CharacterBody {
 }
 
 const mockTibiaService = {
-  fetchCharacter: async (name: string) => ({
+  fetchCharacter: (name: string) => ({
     name,
     sex: 'male',
     vocation: 'Knight',

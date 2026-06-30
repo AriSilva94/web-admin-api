@@ -1,4 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { CharactersService } from './characters.service';
 import type { TibiaService } from '../tibia/tibia.service';
 
@@ -61,6 +62,22 @@ describe('CharactersService', () => {
       const prisma = makePrisma();
       prisma.character.count.mockResolvedValue(1);
       prisma.character.findFirst.mockResolvedValue({ id: 'existing' });
+      const service = new CharactersService(prisma as never, makeTibia());
+
+      await expect(service.add('user-1', 'Bobeek')).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+    });
+
+    it('maps a P2002 unique-constraint violation (race) to ConflictException', async () => {
+      const prisma = makePrisma();
+      prisma.character.count.mockResolvedValue(0);
+      prisma.character.findFirst.mockResolvedValue(null);
+      const p2002 = new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        { code: 'P2002', clientVersion: '0.0.0' },
+      );
+      prisma.character.create.mockRejectedValue(p2002);
       const service = new CharactersService(prisma as never, makeTibia());
 
       await expect(service.add('user-1', 'Bobeek')).rejects.toBeInstanceOf(
